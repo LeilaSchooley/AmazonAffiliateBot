@@ -6,17 +6,18 @@ import openai
 import requests
 from gtts import gTTS
 from moviepy.editor import *
+import re
 
 PEXELS_API_KEY = 'HrgherDGAVcPKSpQBdgqxii7Uy79NsLoos9FUcOGxKnerpU4jy2ih2gC'
 
 VIDEO_DURATION = 60  # Desired duration of video in seconds
 VIDEO_COUNT = 5  # Desired number of videos
 MAX_TRIES = 3
-import re
 
 
 class VideoCreator:
     openai.api_key = "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"
+
     @staticmethod
     def replace_numbers(string):
         # Define regular expression pattern to match all numbers
@@ -112,10 +113,11 @@ class VideoCreator:
                 continue
         if generated_text:
             generated_text = self.replace_numbers(generated_text)
-            generated_text = generated_text.replace("- ", "" )
-            generated_text = generated_text.replace(". ", "" )
-            generated_text =  [line for line in generated_text.split("\n")]
+            generated_text = generated_text.replace("- ", "")
+            generated_text = generated_text.replace(". ", "")
+            generated_text = [line for line in generated_text.split("\n")]
         return generated_text
+
     def create_answers(self, keyword, total_words):
         generated_text = None
         prompt = f"Generate a text with about {total_words} words on the topic: {keyword}."
@@ -204,5 +206,3 @@ class VideoCreator:
         # Save final video
         final_media.write_videofile(output_file, fps=fps, temp_audiofile='temp_audio.mp3', remove_temp=True,
                                     ffmpeg_params=['-preset', 'ultrafast', '-tune', 'fastdecode'])
-
-

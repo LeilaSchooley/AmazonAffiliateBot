@@ -1,0 +1,6 @@
+gtts
+moviepy
+openai
+playwright
+requests
+tinytag
