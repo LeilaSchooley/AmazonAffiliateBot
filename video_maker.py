@@ -1,208 +1,187 @@
-import math
 import os
-import random
-from moviepy.editor import VideoFileClip
-import openai
-import requests
-from gtts import gTTS
+import moviepy.editor as mp
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+import os
+import datetime
+import nltk
+from TTS.api import TTS
 from moviepy.editor import *
-import re
+from nltk.tokenize import sent_tokenize
+from moviepy.video.tools.subtitles import SubtitlesClip
+import os
+import openai
 
-PEXELS_API_KEY = 'HrgherDGAVcPKSpQBdgqxii7Uy79NsLoos9FUcOGxKnerpU4jy2ih2gC'
 
-VIDEO_DURATION = 60  # Desired duration of video in seconds
-VIDEO_COUNT = 5  # Desired number of videos
+os.environ['COQUI_STUDIO_TOKEN'] = 'IyLxwjp58yobNeCbzYrk5I88G1myolV1Qy5xT37WCduDybw6DDilGwy1KlYBSrJS'
+openai.api_key = "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"
+
+nltk.download('punkt')
+
 MAX_TRIES = 3
 
-
-class VideoCreator:
-    openai.api_key = "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"
-
-    @staticmethod
-    def replace_numbers(string):
-        # Define regular expression pattern to match all numbers
-        pattern = r'\d+'
-        # Replace all numbers in string with the word "NUMBER"
-        new_string = re.sub(pattern, '', string)
-        return new_string
-
-    @staticmethod
-    def download_pexels_videos(keyword, num_videos):
-        url = f'https://api.pexels.com/videos/search?query={keyword}&per_page=40'
-        headers = {'Authorization': PEXELS_API_KEY}
-        total_videos_downloaded = 0
-        # create a folder with the keyword name if it doesn't exist
-        folder_name = keyword.replace(" ", "_")
-        folder_path = os.path.join(folder_name)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-
-        while total_videos_downloaded < num_videos:
-            response = requests.get(url, headers=headers)
-
-            if response.status_code == 200:
-                data = response.json()
-                videos = data['videos']
-                for video in videos:
-                    if total_videos_downloaded >= num_videos:
-                        break
-                    video_url = video['video_files'][-1]['link']
-                    video_id = video['id']
-                    video_filename = f'{folder_path}/{keyword}_{video_id}.mp4'
-                    response = requests.get(video_url)
-                    if response.status_code == 200:
-                        with open(f"{video_filename}", 'wb') as f:
-                            f.write(response.content)
-                            total_videos_downloaded += 1
-                            print(f'Downloaded video {total_videos_downloaded}: {video_filename}')
-            else:
-                print(f'Error fetching data from Pexels API. Status code: {response.status_code}')
-                break
-            next_page = data['next_page']
-            if not next_page:
-                break
-            url = next_page
-        print(f"Downloaded {total_videos_downloaded} videos to {folder_path}")
-
-    def get_random_videos(self, folder_path, total_duration):
-        # Get all files in the folder
-        all_files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-
-        # Filter video files by extension (you may add more video extensions if needed)
-        video_files = [f for f in all_files if f.endswith(('.mp4', '.avi', '.mov', '.mkv'))]
-        # Shuffle the list of video files
-        random.shuffle(video_files)
-
-        selected_videos = []
-        selected_duration = 0
-
-        # Select random videos until the total duration reaches or exceeds the specified length
-        for video_file in video_files:
-            video_path = os.path.join(folder_path, video_file)
-            video_clip = VideoFileClip(video_path)
-            if selected_duration <= total_duration:
-                selected_videos.append(video_path)
-                selected_duration += video_clip.duration
-            else:
-                break
-
-        if selected_duration < total_duration:
-            print(
-                f"The total duration of selected videos is {selected_duration} seconds, which is shorter than the specified length of {total_duration} seconds.")
-
-        return selected_videos
-
-    def create_questions(self, keyword):
-        generated_text = None
-        prompt = f"Generate 2 unordered youtube keywords related to '{keyword} '"
-        message = {
-            "role": "user",
-            "content": prompt
-        }
-        for _ in range(MAX_TRIES):
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[message]
-                )
-                generated_text = response['choices'][0]['message']['content'].strip()
-                print(generated_text)
-
-                break
-            except:
-                continue
-        if generated_text:
-            generated_text = self.replace_numbers(generated_text)
-            generated_text = generated_text.replace("- ", "")
-            generated_text = generated_text.replace(". ", "")
-            generated_text = [line for line in generated_text.split("\n")]
-        return generated_text
-
-    def create_answers(self, keyword, total_words):
-        generated_text = None
-        prompt = f"Generate a text with about {total_words} words on the topic: {keyword}."
-        message = {
-            "role": "user",
-            "content": prompt
-        }
-
-        for _ in range(MAX_TRIES):
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[message]
-                )
-                generated_text = response['choices'][0]['message']['content'].strip().split()
-                break
-            except:
-                continue
-        return generated_text
-
-    def generate_text_and_images(self, prompt, video_length, words_per_second=2.5):
-        total_words = int(video_length * words_per_second)
-        message = {
-            "role": "user",
-            "content": f"Generate a text with about {total_words} words on the topic: {prompt}."
-        }
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[message]
-        )
-        generated_text = response['choices'][0]['message']['content'].strip()
-        print(generated_text)
-        # Split the generated text into smaller segments for each image
-        num_images = math.ceil(total_words / 30)  # Assuming around 30 words per image
-        words = generated_text.split()
-        words_per_image = len(words) // num_images
-        text_segments = [' '.join(words[i:i + words_per_image]) for i in range(0, len(words), words_per_image)]
-
-        # Generate images for each text segment
-        images = []
-        for text in text_segments:
-            response = openai.Image.create(
-                prompt=f"Generate an image for the following description: {text}.",
-                n=1,
-                size="1024x1024"
+def create_amazon_affiliate_description(title, keyword):
+    generated_text = None
+    prompt = f"Generate ONE tiktok advertising script to promote the product {title} using the source content {keyword}." \
+             f"Make sure to mention how it will help people"
+    message = {
+        "role": "user",
+        "content": prompt
+    }
+    for _ in range(MAX_TRIES):
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[message]
             )
-            image_url = response['data'][0]['url']
-            images.append(image_url)
 
-        return text_segments, images
+            generated_text = response['choices'][0]['message']['content'].strip()
+            break
+        except Exception as e:
 
-    def generate_video(self, text_segments, media_files, output_file, resolution=(1280, 720)):
-        fps = 24
+            continue
+    if not generated_text:
+        print(response)
+    return generated_text
 
-        # Create voiceover
-        if len(text_segments) > 1:
-            voiceover_text = ' '.join(text_segments)
-        else:
-            voiceover_text = text_segments[0]
 
-        tts = gTTS(voiceover_text, lang='en')
-        tts.save('temp_voiceover.mp3')
-        voiceover = AudioFileClip('temp_voiceover.mp3')
+def create_video_from_images(image_folder, output_file, fps=24, duration_between_images=1):
+    image_list = sorted(os.listdir(image_folder))
+    clip_list = []
 
-        # Calculate media durations based on voiceover length
-        total_audio_duration = voiceover.duration
-        media_duration = total_audio_duration / len(media_files)
+    for image in image_list:
+        if ".jpg" in image:
+            full_path = os.path.join(image_folder, image)
+            print(full_path)
+            clip_list.append(mp.ImageClip(full_path).set_duration(duration_between_images))
+    grid_clip = mp.clips_array([clip_list])
+    final_clip = grid_clip.set_duration(duration_between_images * len(image_list)).set_fps(fps)
+    final_clip.write_videofile(output_file)
 
-        # Create media clips
-        media_clips = []
-        for media_file in media_files:
-            if os.path.splitext(media_file)[1].lower() in ['.mp4', '.avi', '.mov', '.wmv']:
-                video_clip = VideoFileClip(media_file).set_duration(media_duration).resize(resolution)
-                video_clip = video_clip.resize(height=resolution[1])  # Maintain aspect ratio
-                video_clip = video_clip.resize(width=resolution[0])  # Maintain aspect ratio
-                video_clip = video_clip.set_audio(None)
-                media_clips.append(video_clip)
-            elif os.path.splitext(media_file)[1].lower() in ['.jpg', '.jpeg', '.png']:
-                image_clip = ImageClip(media_file).set_duration(media_duration).resize(resolution)
-                media_clips.append(image_clip)
 
-        # Concatenate media clips
-        final_media = concatenate_videoclips(media_clips).set_duration(total_audio_duration).set_fps(fps)
-        final_media = final_media.set_audio(voiceover)
+def create_video_with_subtitles(video_script_path, background_video_path, background_music_path, output_path):
+    # Download the 'punkt' module used for sentence tokenization if it has not already been downloaded
+    nltk.download('punkt')
 
-        # Save final video
-        final_media.write_videofile(output_file, fps=fps, temp_audiofile='temp_audio.mp3', remove_temp=True,
-                                    ffmpeg_params=['-preset', 'ultrafast', '-tune', 'fastdecode'])
+    # Select the model for text-to-speech conversion
+    model_name = TTS.list_models()[12]
+    # Create an instance of the selected text-to-speech model
+    tts = TTS(model_name)
+    # Open the text file containing the video script, and read the contents
+
+    with open(video_script_path, 'r', encoding='utf-8') as f:
+        video_script = f.read()
+
+    # Convert the video script to an audio file using the selected text-to-speech model
+    tts.tts_to_file(text=video_script, file_path="voiceover.wav")
+    # Load the newly created audio file
+    new_audioclip = AudioFileClip("voiceover.wav")
+    if background_music_path:
+        # Adjust the volume of the background music
+        new_audioclip = CompositeAudioClip([
+            AudioFileClip("voiceover.wav"),
+            AudioFileClip(background_music_path).volumex(0.2)
+        ])
+    # Load the video file that will be used as the background of the final clip
+    video = VideoFileClip(background_video_path)
+    # Determine the dimensions of the video, and calculate the desired width based on the aspect ratio of 16:9
+    width, height = video.size
+    new_width = int(height * 9 / 16)
+    # Crop the video to the desired width, centered horizontally
+    clip = video.crop(x1=(width - new_width) / 2, x2=(width - new_width) / 2 + new_width)
+    # Set the audio of the cropped video to the adjusted background music and voiceover audio
+    clip.audio = new_audioclip
+    # Load the video file that will be used as the background of the final clip
+    video = VideoFileClip(background_video_path)
+    # Determine the dimensions of the video, and calculate the desired width based on the aspect ratio of 16:9
+    width, height = video.size
+    new_width = int(height * 9 / 16)
+    # Crop the video to the desired width, centered horizontally
+    clip = video.crop(x1=(width - new_width) / 2, x2=(width - new_width) / 2 + new_width)
+
+    if new_audioclip:
+        clip.audio = new_audioclip
+
+    # Define a function to create subtitles for the video
+    def subtitles(sentences):
+        # Initialize an empty list to store the SRT file contents
+        srt_lines = []
+        # Initialize the start and end time to zero
+        start = datetime.timedelta(seconds=0)
+        end = datetime.timedelta(seconds=0)
+        # Initialize a counter to keep track of subtitle numbers
+        counter = 1
+        # Loop over each sentence in the list of sentences passed to the function
+        for sentence in sentences:
+            # Split the sentence into words
+            words = sentence.split()
+            # Calculate the number of lines needed for this sentence (assuming each line has 4 words)
+            num_lines = len(words) // 4 + 1
+            # Loop over each line of the sentence
+            for j in range(num_lines):
+                # Get the words for this line
+                line_words = words[j * 4: (j + 1) * 4]
+                # Join the words into a single string to form the line
+                line = ' '.join(line_words)
+                # Calculate the end time for this line based on the length of the line
+                end += datetime.timedelta(seconds=len(line_words) * 0.35)
+                # Check if the line is not empty
+                if line:
+                    # Format the start and end times as  strings in the SRT format
+                    start_str = '{:02d}:{:02d}:{:02d},{:03d}'.format(
+                        start.seconds // 3600,
+                        (start.seconds // 60) % 60,
+                        start.seconds % 60,
+                        start.microseconds // 1000
+                    )
+                    end_str = '{:02d}:{:02d}:{:02d},{:03d}'.format(
+                        end.seconds // 3600,
+                        (end.seconds // 60) % 60,
+                        end.seconds % 60,
+                        end.microseconds // 1000
+                    )
+                    # Add the subtitle number, start and end times, and line to the SRT list
+                    srt_lines.append(str(counter))
+                    srt_lines.append(start_str + ' --> ' + end_str)
+                    srt_lines.append(line)
+                    srt_lines.append('')
+                    # Increment the subtitle counter
+                    counter += 1
+                    # Update the start time for the next line
+                    start = end
+                    # Join the lines of the SRT file into a single string
+                    srt_file = '\n'.join(srt_lines)
+                    # Write the SRT file to disk
+                    with open("subtitles.srt", "w") as f:
+                        f.write(srt_file)
+
+        # Call the 'subtitles' function with a list of sentences, which are obtained by tokenizing the video script
+
+    subtitles(list(filter(None, (sent_tokenize(video_script)))))
+
+    # Define a lambda function to generate the subtitle clips from the SRT file
+    generator = lambda txt: TextClip(txt, font='Arial-Bold', fontsize=30, color='white', bg_color='rgba(0,0,0,0.4)')
+
+    # Create the subtitle clip from the SRT file
+    subtitle_source = SubtitlesClip("subtitles.srt", generator)
+
+    # Get the height of the video and subtitle clip
+    video_height = clip.size[1]
+
+    # Calculate the position of the subtitle clip
+    subtitle_y = video_height - 159  # adjust the value of 50 to move the subtitles up/down
+
+    # Combine the video clip and the subtitle clip, and adjust the speed and length of the result
+
+    clip = CompositeVideoClip([clip, subtitle_source.set_pos(('center', subtitle_y))]).speedx(factor=1.1).subclip(
+        0, 60)
+    # Write the final video clip to disk
+    clip.write_videofile(output_path)
+
+
+# create_video_from_images('./', 'output.mp4')
+
+# Example usage with optional background music and voiceover
+
+"""create_video_with_subtitles('video_script.txt', 'output.mp4',
+                            'music.mp3', "output_video.mp4")
+"""
