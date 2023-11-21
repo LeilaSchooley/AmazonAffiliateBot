@@ -72,13 +72,13 @@ def create_video_with_subtitles(video_script_path, background_video_path, backgr
         video_script = f.read()
 
     # Convert the video script to an audio file using the selected text-to-speech model
-    tts.tts_to_file(text=video_script, file_path="voiceover.wav")
+    tts.tts_to_file(text=video_script, file_path="../data/voiceover.wav")
     # Load the newly created audio file
-    new_audioclip = AudioFileClip("voiceover.wav")
+    new_audioclip = AudioFileClip("../data/voiceover.wav")
     if background_music_path:
         # Adjust the volume of the background music
         new_audioclip = CompositeAudioClip([
-            AudioFileClip("voiceover.wav"),
+            AudioFileClip("../data/voiceover.wav"),
             AudioFileClip(background_music_path).volumex(0.2)
         ])
     # Load the video file that will be used as the background of the final clip
@@ -151,7 +151,7 @@ def create_video_with_subtitles(video_script_path, background_video_path, backgr
                     # Join the lines of the SRT file into a single string
                     srt_file = '\n'.join(srt_lines)
                     # Write the SRT file to disk
-                    with open("subtitles.srt", "w") as f:
+                    with open("../data/subtitles.srt", "w") as f:
                         f.write(srt_file)
 
         # Call the 'subtitles' function with a list of sentences, which are obtained by tokenizing the video script
