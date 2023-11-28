@@ -93,16 +93,6 @@ class Scraper:
         endpoint, port = await launch_browser(token, self.profile_id)
         self.page = await self.launch_browser_playwright_dolphin(port, endpoint)
 
-    async def save_login(self, context):
-        print("Please login manually!")
-        await self.page.get_by_role("button", name="Allow all cookies").click()
-        await self.page.get_by_label("Phone number, username, or email").type(INSTAGRAM_USERNAME)
-        await self.page.get_by_label("Password").type(INSTAGRAM_PASSWORD)
-        await self.page.locator("div").filter(has_text=re.compile(r"^Log in$")).first.click()
-
-        await self.page.pause()
-        await context.storage_state(path="state.json")
-        print("Saved login!")
 
     async def get_product_links_from_search(self, search_url, max_links):
         product_links = []

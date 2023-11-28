@@ -13,10 +13,14 @@ class TestGetProductInfo(unittest.IsolatedAsyncioTestCase):
     async def test_get_product_info(self):
         product_url = 'https://www.amazon.com/dp/B00ZV9PXP2'
         title, description, images, link = await self.scraper.get_product_info(product_url)
+
+        print(images)
         self.assertNotEqual(title, '')
         self.assertNotEqual(description, '')
         self.assertNotEqual(link, '')
         self.assertGreater(len(images), 0)
+
+
 
 
     async def test_get_product_links(self):

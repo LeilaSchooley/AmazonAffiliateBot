@@ -6,8 +6,7 @@ import pandas as pd
 from modules.upload_videos import upload_to_youtube
 
 
-async def gather_product_details(links):
-    scraper = Scraper()  # Initialize your Scraper
+async def gather_product_details(links, scraper):
     products_data = []
 
     for link in links:
@@ -30,11 +29,11 @@ async def main():
 
         search_url = "https://www.amazon.com/Apple-MacBook-Chip-13-inch-512GB/dp/B08R2WTNQ6/ref=sr_1_1?keywords=Apple+MacBook+Air+13.3%22+%28512GB+SSD%2C+M1+Chip%2C+8GB%29+Laptop+-+Space+Grey+-+MGN73B%2FA&qid=1700658170&sr=8-1"  # Replace with the desired product URL
         product_links = await scraper.get_product_links_from_search(search_url, 10)  # Adjust the number as needed
-        product_details = await gather_product_details(product_links)
+        product_details = await gather_product_details(product_links, scraper)
 
         # Convert to a pandas DataFrame
         df = pd.DataFrame(product_details)
-
+        print(df)
         # Write to a CSV file
         df.to_csv('product_data.csv', index=False)
 
