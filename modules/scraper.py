@@ -63,6 +63,23 @@ class Scraper:
         self.context = None
 
         self.profile_id = "193419429"  # Retrieve the profile ID as needed
+    async def login_dolphin(self):
+        url = "https://anty-api.com/auth/login"
+        payload = {'username': os.environ["DOLPHIN_LOGIN"], 'password': os.environ["DOLPHIN_PASSWORD"]}
+        for _ in range(15):
+            try:
+                response = requests.post(url, data=payload)
+                return response.json()["token"]
+            except Exception as e:
+                print(f"Error logging in: {e}")
+                await asyncio.sleep(1)
+
+    async def launch_browser_playwright_dolphin(self, port, endpoint):
+        self.p = await async_playwright().start()
+        self.browser = await self.p.chromium.connect_over_cdp(f"ws://127.0.0.1:{port}{endpoint}")
+        self.context = self.browser.contexts[0]
+        self.page = self.context.pages[0]
+        return self.page
 
     async def open_browser(self, use_state_file):
         self.p = await async_playwright().start()
@@ -82,23 +99,22 @@ class Scraper:
             endpoint, port = await launch_browser(token, self.profile_id)
             self.page = await self.launch_browser_playwright_dolphin(port, endpoint)
 
-    async def login_dolphin(self):
-        url = "https://anty-api.com/auth/login"
-        payload = {'username': os.environ["DOLPHIN_LOGIN"], 'password': os.environ["DOLPHIN_PASSWORD"]}
-        for _ in range(15):
-            try:
-                response = requests.post(url, data=payload)
-                return response.json()["token"]
-            except Exception as e:
-                print(f"Error logging in: {e}")
-                await asyncio.sleep(1)
+    async def get_product_links_from_search(self, search_url, max_links):
+        product_links = []
+        await self.page.goto(search_url)
+        while len(product_links) < max_links:
+            new_links = await self.page.locator_all('a[href*="/dp/"]')
+            unique_links = list(set([await link.get_attribute('href') for link in new_links]))
+            product_links.extend(unique_links)
+            # Break if reached max_links
+            if len(product_links) >= max_links:
+                break
+            # Click next page or scroll
+            # Add logic here to navigate to the next page
 
-    async def launch_browser_playwright_dolphin(self, port, endpoint):
-        self.p = await async_playwright().start()
-        self.browser = await self.p.chromium.connect_over_cdp(f"ws://127.0.0.1:{port}{endpoint}")
-        self.context = self.browser.contexts[0]
-        self.page = self.context.pages[0]
-        return self.page
+            await self.page.get_by_role("link", name="Go to next page, page 2").click()
+
+        return product_links[:max_links]
 
     async def save_login(self, context):
         print("Please login manually!")
@@ -172,11 +188,7 @@ class Scraper:
 
             await stop_browser(self.profile_id)
 
-    async def get_product_links(self, url):
-        await self.page.goto(url)
-        product_links = await self.page.locator_all('a[href*="/dp/"]')
-        unique_links = list(set([await link.get_attribute('href') for link in product_links]))
-        return unique_links
+
 
     async def pause(self):
         await self.page.pause()
@@ -188,5 +200,3 @@ class Scraper:
         await self.browser.close()
         await self.p.stop()
 
-    async def close_browser(self):
-        await self.browser.close()
