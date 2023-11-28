@@ -2,6 +2,10 @@ import asyncio
 import os
 from modules.scraper  import Scraper  # Import the Scraper class from your module
 import pandas as pd
+
+from modules.upload_videos import upload_to_youtube
+
+
 async def gather_product_details(links):
     scraper = Scraper()  # Initialize your Scraper
     products_data = []
@@ -40,6 +44,15 @@ async def main():
         await scraper.pause()
     finally:
         await scraper.close_browser()  # Close the browser when done
+
+    # Loop through each row in the DataFrame
+    for index, row in df.iterrows():
+        # Access columns by name
+        column1 = row['column_name_1']  # Replace with your column name
+        column2 = row['column_name_']
+
+        await upload_to_youtube(scraper)
+
 
 
 if __name__ == "__main__":

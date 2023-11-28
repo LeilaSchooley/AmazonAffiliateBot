@@ -1,6 +1,6 @@
 import unittest
 import asyncio
-from scraper import Scraper
+from modules.scraper import Scraper
 
 class TestGetProductInfo(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -18,10 +18,10 @@ class TestGetProductInfo(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(link, '')
         self.assertGreater(len(images), 0)
 
-    @unittest.skip('Work in progress')
+
     async def test_get_product_links(self):
-        url = "https://www.amazon.co.uk/cool-gadgets/s?k=cool+gadgets"
-        urls = await self.scraper.get_product_links(url)
+        url = "https://www.amazon.com/cool-gadgets/s?k=cool+gadgets"
+        urls = await self.scraper.get_product_links_from_search(url, max_links=200)
         self.assertGreater(len(urls), 0)
 
 if __name__ == '__main__':
