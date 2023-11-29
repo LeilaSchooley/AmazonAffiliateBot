@@ -26,7 +26,9 @@ class TestGetProductInfo(unittest.IsolatedAsyncioTestCase):
     async def test_get_product_links(self):
         url = "https://www.amazon.com/cool-gadgets/s?k=cool+gadgets"
         urls = await self.scraper.get_product_links_from_search(url, max_links=200)
-        self.assertGreater(len(urls), 0)
+        print(urls)
+        assert len(urls) >= 200, "The length of 'urls' should be 200 or more."
+
 
 if __name__ == '__main__':
     unittest.main()

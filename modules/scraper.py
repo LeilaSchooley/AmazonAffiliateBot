@@ -85,7 +85,6 @@ class Scraper:
         self.p = await async_playwright().start()
         self.browser = await self.p.firefox.launch(headless=False)
 
-
         # Dolphin code to launch the browser
         token = await login_dolphin()
 
@@ -93,6 +92,24 @@ class Scraper:
         endpoint, port = await launch_browser(token, self.profile_id)
         self.page = await self.launch_browser_playwright_dolphin(port, endpoint)
 
+    async def navigate_to_next_page(self, current_page_number):
+
+        await self.page.keyboard.press('End')
+
+        # Assuming the "Next" button has the aria-label attribute with the format "Go to next page, page X"
+        next_page_label = f"Go to next page, page {current_page_number + 1}"
+        next_page_link = await self.page.locator(f'a[aria-label="{next_page_label}"]').first
+
+        if next_page_link:
+            try:
+                await next_page_link.click()
+                # Wait for the page to load
+                await self.page.wait_for_load_state("load")
+                return True  # Successful navigation
+            except Exception as e:
+                print(f"Error clicking 'Next' page link: {e}")
+
+        return False  # Failed to navigate
 
     async def get_product_links_from_search(self, search_url, max_links):
         product_links = []
@@ -106,19 +123,14 @@ class Scraper:
                 break
             # Click next page or scroll
             # Add logic here to navigate to the next page
-            await self.page.keyboard.press('End')
             # Try to find and click the "Next" page link
-            next_page_button_locator = self.page.locator('aria-label:has-text("Next")')
-            if await next_page_button_locator.is_visible():
-                await next_page_button_locator.click()
 
-                try:
-                    await self.page.wait_for_load_state("load")
-                except:
-                    await asyncio.sleep(5)
-                    pass
+            # Example usage:
+            current_page_number = 1  # Change this to the current page number
+            if self.navigate_to_next_page(current_page_number):
+                print(f"Successfully navigated to page {current_page_number + 1}")
             else:
-                print("Next page link not found or no more pages available.")
+                print("Failed to navigate to the next page")
 
         return product_links[:max_links]
 
