@@ -92,47 +92,81 @@ class Scraper:
         endpoint, port = await launch_browser(token, self.profile_id)
         self.page = await self.launch_browser_playwright_dolphin(port, endpoint)
 
-    async def navigate_to_next_page(self, current_page_number):
 
-        await self.page.keyboard.press('End')
+    async def get_current_page_number(self):
+        # Get the current URL
+        current_url = self.page.url
+        # Extract the page number from the URL
+        match = re.search(r'page=(\d+)', current_url)
+        if match:
+            # Return the page number as an integer
+            return int(match.group(1))
+        else:
+            # If 'page=' is not in the URL, assume it's page 1
+            return 1
 
-        # Assuming the "Next" button has the aria-label attribute with the format "Go to next page, page X"
-        next_page_label = f"Go to next page, page {current_page_number + 1}"
-        next_page_link = await self.page.locator(f'a[aria-label="{next_page_label}"]').first
+    async def navigate_to_next_page(self):
+        current_page_number = await self.get_current_page_number()
+        next_page_number = current_page_number + 1
+
+        # Fetch all links that contain 'page=' in their href attribute
+        page_links_locator = self.page.locator('a[href*="page="]')
+        page_links = await page_links_locator.evaluate_all('elements => elements.map(e => e.href)')
+
+        # Filter the link that contains the desired next page number
+        next_page_link = next(filter(lambda link: f"page={next_page_number}" in link, page_links), None)
 
         if next_page_link:
             try:
-                await next_page_link.click()
-                # Wait for the page to load
+                await self.page.goto(next_page_link)  # Navigate using page.goto
                 await self.page.wait_for_load_state("load")
-                return True  # Successful navigation
+                print(f"Successfully navigated to page {next_page_number}")
+                return True
             except Exception as e:
-                print(f"Error clicking 'Next' page link: {e}")
+                print(f"Error navigating to page {next_page_number}: {e}")
+        else:
+            print(f"No link found for page {next_page_number}")
 
-        return False  # Failed to navigate
+        return False
 
+    async def gather_product_details(self, links):
+        products_data = []
+
+        for link in links:
+            title, description, image_links, affiliate_link = await self.get_product_info(link)
+            products_data.append({
+                "title": title,
+                "description": description,
+                "image_links": image_links,
+                "affiliate_link": affiliate_link
+            })
+
+        return products_data
     async def get_product_links_from_search(self, search_url, max_links):
-        product_links = []
+        product_links = set()  # Use a set to store unique links
+        unique_ids = set()  # Keep track of unique product IDs
+        keyword = "bottle"
         await self.page.goto(search_url)
+
         while len(product_links) < max_links:
             new_links = await self.page.locator('a[href*="/dp/"]').all()
-            unique_links = list(set([await link.get_attribute('href') for link in new_links]))
-            product_links.extend(unique_links)
-            # Break if reached max_links
-            if len(product_links) >= max_links:
-                break
-            # Click next page or scroll
-            # Add logic here to navigate to the next page
-            # Try to find and click the "Next" page link
 
-            # Example usage:
-            current_page_number = 1  # Change this to the current page number
-            if self.navigate_to_next_page(current_page_number):
-                print(f"Successfully navigated to page {current_page_number + 1}")
-            else:
-                print("Failed to navigate to the next page")
+            for link in new_links:
+                href = await link.get_attribute('href')
+                if "/dp/" in href and keyword in href and "customerReviews" not in href:
+                    # Extract the unique product identifier
+                    product_id = href.split('/dp/')[1].split('/')[0]
+                    if product_id not in unique_ids:
+                        unique_ids.add(product_id)
+                        product_links.add(f"https://amazon.com{href}")
 
-        return product_links[:max_links]
+                # Break if reached max_links
+                if len(product_links) >= max_links:
+                    break
+
+            await self.navigate_to_next_page()
+
+        return list(product_links)[:max_links]  # Convert set back to list and limit to max_links
 
     async def get_product_info(self, product_url):
         try:
@@ -149,7 +183,7 @@ class Scraper:
             else:
                 print("Title element not found")
             # Use this for the description
-            description_locator = self.page.locator("[data-feature-name='productDescription']")
+            description_locator = self.page.locator("#productDescription")
             description_count = await description_locator.count()
 
             if description_count > 0:
