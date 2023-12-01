@@ -1,68 +1,14 @@
-import asyncio
-from playwright.async_api import async_playwright
-import os
 import re
-import time
 import traceback
-import requests
+import urllib.parse
+from playwright.async_api import async_playwright
 
-from playwright.async_api import async_playwright, expect
-
-import asyncio
 import os
 import time
-import random
 
-login_bot_file = os.path.join(os.path.dirname(__file__), 'state.json')
+from modules.util import stop_browser, get_all_profiles, launch_browser, login_dolphin
 
-
-async def stop_browser(profile_id):
-    for _ in range(15):
-        try:
-            response = requests.get(f"http://localhost:3001/v1.0/browser_profiles/{profile_id}/stop")
-            return response.json()
-        except Exception as e:
-            print(f"Error stopping browser: {e}")
-            await asyncio.sleep(1)
-
-
-async def get_all_profiles(token):
-    url = "https://anty-api.com/browser_profiles/"
-    headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-    for _ in range(15):
-        try:
-            response = requests.get(url, headers=headers)
-            return response.json()
-        except Exception as e:
-            print(f"Error getting profiles: {e}")
-            await asyncio.sleep(1)
-
-
-async def launch_browser(token, id):
-    headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-    for _ in range(15):
-        try:
-            response = requests.get(f"http://localhost:3001/v1.0/browser_profiles/{id}/start?automation=1",
-                                    headers=headers)
-            data = response.json()
-            endpoint = data["automation"]["wsEndpoint"]
-            port = data["automation"]["port"]
-            return endpoint, port
-        except Exception as e:
-            print(f"Error launching browser: {e}")
-            await asyncio.sleep(1)
-
-
-async def login_dolphin():
-    url = "https://anty-api.com/auth/login"
-    payload = {'username': os.environ["DOLPHIN_LOGIN"], 'password': os.environ["DOLPHIN_PASSWORD"]}
-    for _ in range(15):
-        try:
-            response = requests.post(url, data=payload)
-            return response.json()["token"]
-        except Exception as e:
-            print(f"Error logging in: {e}")
-            await asyncio.sleep(1)
+# login_bot_file = os.path.join(os.path.dirname(__file__), 'state.json')
 
 
 class Scraper:
@@ -91,7 +37,6 @@ class Scraper:
         print(await get_all_profiles(token))
         endpoint, port = await launch_browser(token, self.profile_id)
         self.page = await self.launch_browser_playwright_dolphin(port, endpoint)
-
 
     async def get_current_page_number(self):
         # Get the current URL
@@ -142,31 +87,42 @@ class Scraper:
             })
 
         return products_data
-    async def get_product_links_from_search(self, search_url, max_links):
-        product_links = set()  # Use a set to store unique links
-        unique_ids = set()  # Keep track of unique product IDs
-        keyword = "bottle"
-        await self.page.goto(search_url)
 
-        while len(product_links) < max_links:
-            new_links = await self.page.locator('a[href*="/dp/"]').all()
+    async def get_product_links_from_search(self, search_url, max_links, keyword):
+        try:
+            product_links = set()  # Use a set to store unique links
+            unique_ids = set()  # Keep track of unique product IDs
+            print(f"Visiting {search_url}")
+            await self.page.goto(search_url)
 
-            for link in new_links:
-                href = await link.get_attribute('href')
-                if "/dp/" in href and keyword in href and "customerReviews" not in href:
-                    # Extract the unique product identifier
-                    product_id = href.split('/dp/')[1].split('/')[0]
-                    if product_id not in unique_ids:
-                        unique_ids.add(product_id)
-                        product_links.add(f"https://amazon.com{href}")
+            while len(product_links) < max_links:
+                new_links = await self.page.locator('a[href*="/dp/"]').all()
 
-                # Break if reached max_links
-                if len(product_links) >= max_links:
-                    break
+                print(f"Found {len(new_links)} new links on this page.")
 
-            await self.navigate_to_next_page()
+                for link in new_links:
 
-        return list(product_links)[:max_links]  # Convert set back to list and limit to max_links
+                    href = await link.get_attribute('href')
+                    if "/dp/" in href and keyword in href and "amazon.com" not in href and "customerReviews" not in href:
+                        # Extract the unique product identifier
+                        product_id = href.split('/dp/')[1].split('/')[0]
+                        if product_id not in unique_ids:
+                            unique_ids.add(product_id)
+
+                            absolute_href = urllib.parse.urljoin(search_url, href)  # Construct absolute URL
+                            product_links.add(absolute_href)
+                    # Break if reached max_links
+                    if len(product_links) >= max_links:
+                        break
+
+                await self.navigate_to_next_page()
+                print(f"Moving to the next page.")
+
+            return list(product_links)[:max_links]  # Convert set back to list and limit to max_links
+        except Exception as e:
+            traceback.print_exc()
+
+            await stop_browser(self.profile_id)
 
     async def get_product_info(self, product_url):
         try:

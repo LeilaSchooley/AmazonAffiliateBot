@@ -1,6 +1,29 @@
+import configparser
 import os
 from moviepy.editor import TextClip, CompositeVideoClip, ImageClip, concatenate_videoclips, AudioFileClip
 import pyttsx3
+
+
+def download_images():
+    return
+def get_instagram_credentials():
+    # Check if "instagram.ini" file exists
+    if os.path.isfile("data/instagram.ini"):
+        # If the ini file exists, read values from it
+        config = configparser.ConfigParser()
+        config.read("data/instagram.ini")
+
+        # Read the values from the ini file
+        instagram_username = config.get("DEFAULT", "INSTAGRAM_USERNAME")
+        instagram_password = config.get("DEFAULT", "INSTAGRAM_PASSWORD")
+        instagram_api_key = config.get("DEFAULT", "INSTAGRAM_API_KEY")
+    else:
+        # If the ini file doesn't exist, read values from environment variables
+        instagram_username = os.environ.get("INSTAGRAM_USERNAME")
+        instagram_password = os.environ.get("INSTAGRAM_PASSWORD")
+        instagram_api_key = os.environ.get("INSTAGRAM_API_KEY")
+
+    return instagram_username, instagram_password, instagram_api_key
 
 def create_video_with_tts(text, image_folder=None, filename="output.mp4", fontsize=24, color='white'):
     # Generate speech from text using pyttsx3
@@ -40,6 +63,14 @@ def create_video_with_tts(text, image_folder=None, filename="output.mp4", fontsi
 
     # Remove temporary audio file
     os.remove(tts_file)
+
+
+def create_answers(keyword, total_words):
+    generated_text = None
+    prompt = f"Generate a text with about {total_words} words on the topic: {keyword}."
+
+
+    return ""
 
 # Example usage
 text = """

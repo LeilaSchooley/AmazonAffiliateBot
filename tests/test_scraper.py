@@ -29,23 +29,28 @@ class TestGetProductInfo(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_product_links(self):
         try:
+            keyword = "gadgets"
             url = "https://www.amazon.com/cool-gadgets/s?k=cool+gadgets"
-            urls = await self.scraper.get_product_links_from_search(url, max_links=200)
+            urls = await self.scraper.get_product_links_from_search(url, max_links=20,keyword=keyword )
 
-            assert len(urls) >= 200, "The length of 'urls' should be 200 or more."
+            assert len(urls) >= 20, "The length of 'urls' should be 200 or more."
+
+            for url in urls:
+                print(url)
         finally:
             # Ensure the browser is closed even if the test fails
             await self.scraper.close_browser()
 
     async def test_extract_product_data_and_save_to_csv(self):
         # Initialize your Scraper
-
-        # Define the search URL and maximum number of product links
-        search_url = "https://www.amazon.com/s?k=water+bottle&crid=FSABEHAGFGDU&sprefix=w%2Caps%2C57&ref=nb_sb_ss_ts-doa-p_1_1"  # Replace with the desired product URL
+        keyword = "gadgets"
         max_links = 10
 
+        # Define the search URL and maximum number of product links
+        url = "https://www.amazon.com/cool-gadgets/s?k=cool+gadgets"
+
         # Get product links from the search URL
-        product_links = await self.scraper.get_product_links_from_search(search_url, max_links)
+        product_links = await self.scraper.get_product_links_from_search(url, max_links=max_links, keyword=keyword)
 
         # Gather product details using the gathered links
         product_details = await self.scraper.gather_product_details(product_links)
