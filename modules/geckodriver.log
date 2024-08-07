@@ -1,0 +1,26 @@
+1701314535081	geckodriver	INFO	Listening on 127.0.0.1:65208
+1701314538104	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "65209" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\badsc\\AppData\\Local\\Temp\\rust_mozprofileyadGEW"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+1701314538384	Marionette	INFO	Marionette enabled
+Dynamically enable window occlusion 0
+1701314538469	Marionette	INFO	Listening on port 65227
+WebDriver BiDi listening on ws://127.0.0.1:65209
+Read port: 65227
+1701314538707	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:65209/devtools/browser/3a5a790f-21c2-4181-9973-0a12707847dc
+1701314541574	Marionette	INFO	Stopped listening on port 65227
+Dynamically enable window occlusion 1
+1701314581818	geckodriver	INFO	Listening on 127.0.0.1:65315
+1701314584847	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "65316" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\badsc\\AppData\\Local\\Temp\\rust_mozprofilew6y6gR"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+1701314585133	Marionette	INFO	Marionette enabled
+Dynamically enable window occlusion 0
+1701314585201	Marionette	INFO	Listening on port 65346
+WebDriver BiDi listening on ws://127.0.0.1:65316
+Read port: 65346
+1701314585373	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+DevTools listening on ws://127.0.0.1:65316/devtools/browser/887048b8-fb0a-48f1-ac9d-8db106822118
+1701314588382	Marionette	INFO	Stopped listening on port 65338
+Dynamically enable window occlusion 1
